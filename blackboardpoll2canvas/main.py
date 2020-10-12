@@ -1,5 +1,5 @@
-""" Import poll reports from BlackBoard Collaborate Ultra into Canvas gradebook format
-"""
+""" Import poll reports from BlackBoard Collaborate Ultra into Canvas gradebook
+format """
 
 import re
 import argparse
@@ -39,7 +39,7 @@ def _normalize(name):
     STRING_FORMAT = "{last}, {first}"
     STRING_2_FORMAT = "{last} {suffix}, {first}"
     n = nameparser.HumanName(name)
-    if n.suffix is not "":
+    if n.suffix != "":
         n.string_format = STRING_2_FORMAT
     else:
         n.string_format = STRING_FORMAT
@@ -58,7 +58,7 @@ def _score(x):
     return _score1(x['CorrectAnswer'], x['AttendeePollAnswer'])
 
 
-def main(args):
+def _main(args):
     roster = pandas.read_csv(args.gradebook_path,
                              usecols=GRADEBOOK_COLUMNS,
                              dtype="string")
@@ -99,9 +99,9 @@ def main(args):
     return roster.drop("dummy", axis=1)
 
 
-if __name__ == '__main__':
+def main():
     parser = makeparser()
     args = parser.parse_args()
-    roster = main(args)
+    roster = _main(args)
     roster.to_csv(args.output_path)
     print("Written: {}".format(args.output_path))
