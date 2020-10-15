@@ -46,7 +46,7 @@ def _normalize(name):
     return str(n)
 
 
-def _score1(correct, attendee):
+def _correct1(correct, attendee):
     if pandas.isna(attendee):
         return 0
     if correct == '*':
@@ -54,8 +54,20 @@ def _score1(correct, attendee):
     return 1 if correct == attendee else 0
 
 
-def _score(x):
-    return _score1(x['CorrectAnswer'], x['AttendeePollAnswer'])
+def _correct(x):
+    return _correct1(x['CorrectAnswer'], x['AttendeePollAnswer'])
+
+
+def _incorrect1(correct, attendee):
+    if pandas.isna(attendee):
+        return 0
+    if correct == '*':
+        return 0
+    return 1 if correct != attendee else 0
+
+
+def _incorrect(x):
+    return _incorrect1(x['CorrectAnswer'], x['AttendeePollAnswer'])
 
 
 def _main(args):
@@ -91,12 +103,22 @@ def _main(args):
         df['AttendeePollAnswer'] = df['AttendeePollAnswer'].str.upper()
         # df['IsCorrect'] = df['CorrectAnswer'] == df['AttendeePollAnswer']
         df0 = df0.join(df)
-        scores = df0.apply(_score, axis=1).groupby('Student').sum()
-        d[poll_name] = scores
+        correct = df0.apply(_correct, axis=1).groupby('Student').sum()
+        incorrect = df0.apply(_incorrect, axis=1).groupby('Student').sum()
+        scores = pandas.DataFrame({
+            'correct': correct,
+            'incorrect': incorrect,
+            'attempted': correct + incorrect
+        })
+        d[poll_name] = scores.apply(final, axis=1)
     roster.set_index('Student', inplace=True)
     for poll_name in d:
         roster[poll_name] = d[poll_name]
     return roster.drop("dummy", axis=1)
+
+
+def final(x):
+    return round(0.4 * x['attempted'] + 0.6 * x['correct'], 2)
 
 
 def main():
@@ -105,3 +127,7 @@ def main():
     roster = _main(args)
     roster.to_csv(args.output_path)
     print("Written: {}".format(args.output_path))
+
+
+if __name__ == '__main__':
+    main()
