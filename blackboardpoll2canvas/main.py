@@ -38,9 +38,13 @@ def makeparser():
 def _normalize(name):
     STRING_FORMAT = "{last}, {first}"
     STRING_2_FORMAT = "{last} {suffix}, {first}"
+    # for non-hyphenated last names
+    STRING_3_FORMAT = "{middle} {last}, {first}"
     n = nameparser.HumanName(name)
     if n.suffix != "":
         n.string_format = STRING_2_FORMAT
+    elif n.middle != "":
+        n.string_format = STRING_3_FORMAT
     else:
         n.string_format = STRING_FORMAT
     return str(n)
@@ -51,7 +55,7 @@ def _score1(correct, attendee):
         return 0
     if correct == '*':
         return 1
-    return 1 if correct == attendee else 0
+    return 1 if correct == attendee else 0.6
 
 
 def _score(x):
