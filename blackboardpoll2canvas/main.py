@@ -62,12 +62,29 @@ def _score(x):
     return _score1(x['CorrectAnswer'], x['AttendeePollAnswer'])
 
 
+def read_gradebook(path):
+    df = pandas.read_csv(path, usecols=GRADEBOOK_COLUMNS, dtype="string")
+    return df
+
+
+def _upper(col):
+    def func(x):
+        return x[col].str.upper()
+    return func
+
+
+#    keys['CorrectAnswer'] = keys['CorrectAnswer'].str.upper().astype("string")
+def read_keys(path):
+    df = (pandas.read_csv(path, dtype="string")
+          .assign(CorrectAnswer=_upper("CorrectAnswer"))
+          .assign(CorrectAnswer=lambda x: x["CorrectAnswer"].astype("string"))
+          )
+    return df
+
+
 def _main(args):
-    roster = pandas.read_csv(args.gradebook_path,
-                             usecols=GRADEBOOK_COLUMNS,
-                             dtype="string")
-    keys = pandas.read_csv(args.keys_path, dtype="string")
-    keys['CorrectAnswer'] = keys['CorrectAnswer'].str.upper().astype("string")
+    roster = read_gradebook(args.gradebook_path)
+    keys = read_keys(args.keys_path)
     d = {}
     for path in args.poll_path:
         # Extract poll date from path name
@@ -84,6 +101,7 @@ def _main(args):
         roster["dummy"] = 1
         df0 = pandas.merge(poll_keys, roster, on="dummy").drop("dummy", axis=1)
         df0.set_index(["Student", "PollQuestion"], inplace=True)
+
         # Read poll answers
         df = pandas.read_csv(path, encoding="utf-8-sig",
                              usecols=POLL_COLUMNS,
@@ -93,6 +111,7 @@ def _main(args):
         df["Student"] = df["AttendeeName"].map(_normalize).astype("string")
         df.set_index(["Student", "PollQuestion"], inplace=True)
         df['AttendeePollAnswer'] = df['AttendeePollAnswer'].str.upper()
+
         # df['IsCorrect'] = df['CorrectAnswer'] == df['AttendeePollAnswer']
         df0 = df0.join(df)
         scores = df0.apply(_score, axis=1).groupby('Student').sum()
