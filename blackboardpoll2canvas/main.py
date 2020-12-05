@@ -15,6 +15,9 @@ pat = (
 
 POLL_COLUMNS = ["AttendeeName", "PollQuestion", "AttendeePollAnswer"]
 GRADEBOOK_COLUMNS = ["Student", "ID", "SIS User ID", "SIS Login ID", "Section"]
+POINTS_WRONG = 0.6
+POINTS_CORRECT = 1.0
+POINTS_MISSING = 0.0
 
 
 def makeparser():
@@ -32,6 +35,24 @@ def makeparser():
     parser.add_argument("output_path",
                         help="write the new CSV to this path",
                         metavar="output")
+    parser.add_argument("--points-wrong",
+                        type=float,
+                        default=POINTS_WRONG,
+                        help="points for each attempted wrong answer "
+                        "(default: %(default)s)",
+                        metavar="PTS")
+    parser.add_argument("--points-correct",
+                        type=float,
+                        default=POINTS_CORRECT,
+                        help="points for each attempted correct answer "
+                        "(default: %(default)s)",
+                        metavar="PTS")
+    parser.add_argument("--points-missing",
+                        type=float,
+                        default=POINTS_MISSING,
+                        help="points for not attempted answer "
+                        "(default: %(default)s)",
+                        metavar="PTS")
     return parser
 
 
@@ -50,16 +71,20 @@ def _normalize(name):
     return str(n)
 
 
-def _score1(correct, attendee):
+def _score1(correct, attendee, points_wrong, points_correct, points_missing):
     if pandas.isna(attendee):
-        return 0
-    if correct == '*':
-        return 1
-    return 1 if correct == attendee else 0.6
+        return points_missing
+    if correct == '*':  # any answer is correct
+        return points_correct
+    return points_correct if correct == attendee else points_wrong
 
 
-def _score(x):
-    return _score1(x['CorrectAnswer'], x['AttendeePollAnswer'])
+def _score(x,
+           points_wrong=POINTS_WRONG,
+           points_correct=POINTS_CORRECT,
+           points_missing=POINTS_MISSING):
+    return _score1(x['CorrectAnswer'], x['AttendeePollAnswer'],
+                   points_wrong, points_correct, points_missing)
 
 
 def read_gradebook(path):
